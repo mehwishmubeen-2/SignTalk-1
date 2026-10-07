@@ -1,0 +1,2 @@
+npm install recordrtc
+npm install @types/recordrtc

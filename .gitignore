@@ -1,0 +1,34 @@
+# Python virtual environment
+backend/venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Environment secrets — never commit the real .env
+backend/.env
+frontend/.env
+.env
+
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Large video dataset — 5.3 GB, GitHub hard rejects files over 100 MB
+backend/videos/
+
+git rm -r --cached venv
