@@ -14,6 +14,7 @@ export const useSpeechCaptions = (
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearCaption = () => {
+    console.log("🗑️ CLEARING SPEECH CAPTION");
     const msg: CaptionMessage = {
       topic: "caption",
       type: "speech",
@@ -22,16 +23,22 @@ export const useSpeechCaptions = (
       identity: room.localParticipant.identity,
     };
 
+    console.log("Local caption clear message:", msg);
     onCaptionUpdate(msg);
 
     try {
+      const remoteParticipants = room.participants || [];
+      const destinationIds = remoteParticipants.map(p => p.identity);
+      console.log("Publishing speech clear to", destinationIds.length, "participants:", destinationIds);
       const payload = new TextEncoder().encode(JSON.stringify(msg));
       room.localParticipant.publishData(payload, {
         reliable: true,
         topic: "caption",
+        destinationIdentities: destinationIds.length > 0 ? destinationIds : undefined
       });
+      console.log("✅ Speech caption clear published");
     } catch (err) {
-      console.error("Failed to publish speech caption clear:", err);
+      console.error("❌ Failed to publish speech caption clear:", err);
     }
   };
 
@@ -69,6 +76,8 @@ export const useSpeechCaptions = (
 
       if (!text) return;
 
+      console.log(`🎤 SPEECH RECOGNIZED: "${text}" (final: ${isFinal})`);
+
       const msg: CaptionMessage = {
         topic: "caption",
         type: "speech",
@@ -78,17 +87,23 @@ export const useSpeechCaptions = (
       };
 
       // Show on local screen immediately
+      console.log("Updating local speech caption:", msg);
       onCaptionUpdate(msg);
 
       // Broadcast to all participants via LiveKit data channel
       try {
+        const remoteParticipants = room.participants || [];
+        const destinationIds = remoteParticipants.map(p => p.identity);
+        console.log("Publishing speech to", destinationIds.length, "participants:", destinationIds);
         const payload = new TextEncoder().encode(JSON.stringify(msg));
         room.localParticipant.publishData(payload, {
           reliable: true,
           topic: "caption",
+          destinationIdentities: destinationIds.length > 0 ? destinationIds : undefined
         });
+        console.log("✅ Speech caption published");
       } catch (err) {
-        console.error("Failed to publish speech caption:", err);
+        console.error("❌ Failed to publish speech caption:", err);
       }
 
       // Reset the silence timer: clear caption if nothing new is said for 5s

@@ -26,6 +26,7 @@ export default function VideoCallPage() {
   const [token, setToken] = useState<string | null>(null);
   const [serverUrl, setServerUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   // Guard: if there's no roomId in the URL, redirect home immediately
   useEffect(() => {
@@ -42,6 +43,8 @@ export default function VideoCallPage() {
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = sessionData.session?.access_token;
         if (!accessToken) throw new Error("Not authenticated");
+
+        setAuthToken(accessToken);
 
         const res = await fetch(
           `http://localhost:8000/meetings/${roomId}/token`,
@@ -81,7 +84,7 @@ export default function VideoCallPage() {
       onError={(err) => setError(err.message)}
       style={{ height: "100vh", background: "radial-gradient(circle at top left, rgba(20,184,166,0.18), transparent 32%), linear-gradient(135deg,#fffaf0 0%,#f2fbf8 48%,#fff3ed 100%)" }}
     >
-      <CallRoom roomId={roomId!} />
+      <CallRoom roomId={roomId!} authToken={authToken || ""} />
       <RoomAudioRenderer />
     </LiveKitRoom>
   );
@@ -89,7 +92,7 @@ export default function VideoCallPage() {
 
 // ─── CallRoom: lives inside LiveKitRoom so it can access room context ─────────
 
-function CallRoom({ roomId }: { roomId: string }) {
+function CallRoom({ roomId, authToken }: { roomId: string; authToken: string }) {
   const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
   const participants = useParticipants();
@@ -117,27 +120,56 @@ function CallRoom({ roomId }: { roomId: string }) {
   const [signMode, setSignMode] = useState(false);
   const [speechMode, setSpeechMode] = useState(false);
 
+  // ── DEBUG: Track signMode changes ──────────────────────────────────────────
+  useEffect(() => {
+    console.log("🎯 CallRoom MOUNTED");
+    return () => console.log("🎯 CallRoom UNMOUNTED");
+  }, []);
+
+  useEffect(() => {
+    console.log("🎯 signMode changed:", signMode);
+  }, [signMode]);
+
   // ── Receive captions from remote participants via LiveKit data channel ──────
   useEffect(() => {
     const handleData = (payload: Uint8Array) => {
+      console.log("════════════════════════════════════════");
+      console.log("📨 DataReceived event triggered!");
+      console.log("Payload size:", payload.byteLength, "bytes");
+      
       try {
-        const msg = JSON.parse(new TextDecoder().decode(payload)) as CaptionMessage;
-        if (msg.topic !== "caption") return;
+        const decoded = new TextDecoder().decode(payload);
+        console.log("Decoded text:", decoded);
+        
+        const msg = JSON.parse(decoded) as CaptionMessage;
+        console.log("Parsed message:", msg);
+        
+        if (msg.topic !== "caption") {
+          console.log("⏭️ Ignoring non-caption message, topic:", msg.topic);
+          console.log("════════════════════════════════════════");
+          return;
+        }
+
+        console.log(`✅ Caption from ${msg.identity}: "${msg.text}"`);
 
         // If empty text received, clear caption immediately
         if (!msg.text) {
+          console.log(`🗑️ Clearing caption for ${msg.identity}`);
           setCaptions((prev) => {
             const next = { ...prev };
             delete next[msg.identity];
             return next;
           });
+          console.log("════════════════════════════════════════");
           return;
         }
 
+        console.log("Updating captions state with new message");
         setCaptions((prev) => ({ ...prev, [msg.identity]: msg }));
 
         // Auto-clear after 4 seconds of no update
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
+          console.log(`⏰ Auto-clearing caption for ${msg.identity} after 4 seconds`);
           setCaptions((prev) => {
             if (prev[msg.identity]?.text === msg.text) {
               const next = { ...prev };
@@ -147,13 +179,22 @@ function CallRoom({ roomId }: { roomId: string }) {
             return prev;
           });
         }, 4000);
-      } catch {
-        // malformed packet
+        
+        console.log("════════════════════════════════════════");
+      } catch (err) {
+        console.error("❌ Error parsing data message:", err);
+        console.error("Raw payload (first 200 bytes):", payload.slice(0, 200));
+        console.log("════════════════════════════════════════");
       }
     };
 
+    console.log("🔗 Registering RoomEvent.DataReceived listener");
     room.on(RoomEvent.DataReceived, handleData);
-    return () => { room.off(RoomEvent.DataReceived, handleData); };
+    
+    return () => { 
+      console.log("🔌 Unregistering RoomEvent.DataReceived listener");
+      room.off(RoomEvent.DataReceived, handleData); 
+    };
   }, [room]);
 
   // ── Toggle mic ──────────────────────────────────────────────────────────────
@@ -175,8 +216,10 @@ function CallRoom({ roomId }: { roomId: string }) {
 
   // ── Local caption handler ────────────────────────────────────────────────────
   const handleLocalCaption = useCallback((msg: CaptionMessage) => {
+    console.log(`[VideoCall] handleLocalCaption called:`, msg);
     // Clear if empty
     if (!msg.text) {
+      console.log(`[VideoCall] clearing caption for ${msg.identity}`);
       setCaptions((prev) => {
         const next = { ...prev };
         delete next[msg.identity];
@@ -184,6 +227,7 @@ function CallRoom({ roomId }: { roomId: string }) {
       });
       return;
     }
+    console.log(`[VideoCall] setting caption for ${msg.identity}: "${msg.text}"`);
     setCaptions((prev) => ({ ...prev, [msg.identity]: msg }));
   }, []);
 
@@ -224,6 +268,8 @@ function CallRoom({ roomId }: { roomId: string }) {
             signMode={signMode}
             speechMode={speechMode}
             onCaptionUpdate={handleLocalCaption}
+            roomId={roomId}
+            authToken={authToken}
           />
         ))}
       </div>
@@ -237,8 +283,10 @@ function CallRoom({ roomId }: { roomId: string }) {
         onToggleMic={toggleMic}
         onToggleCamera={toggleCamera}
         onToggleSign={() => {
+          console.log("🎯 onToggleSign clicked, current signMode:", signMode);
           setSignMode((v) => {
             const newMode = !v;
+            console.log("🎯 Setting signMode to:", newMode);
             // if turning OFF sign mode, clear local caption immediately
             if (!newMode) {
               setCaptions((prev) => {
