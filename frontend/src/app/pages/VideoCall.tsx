@@ -130,6 +130,34 @@ function CallRoom({ roomId, authToken }: { roomId: string; authToken: string }) 
     console.log("🎯 signMode changed:", signMode);
   }, [signMode]);
 
+  // ── Text-to-Speech Voice-Over for Captions ──────────────────────────────────
+  const playVoiceOver = (text: string) => {
+    // Cancel any ongoing speech
+    window.speechSynthesis?.cancel();
+    
+    console.log("🔊 Playing voice-over:", text);
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;      // Normal speed
+    utterance.pitch = 1.0;     // Normal pitch
+    utterance.volume = 1.0;    // Full volume
+    utterance.lang = "en-US";  // English
+    
+    utterance.onstart = () => {
+      console.log("🔊 Voice-over started");
+    };
+    
+    utterance.onend = () => {
+      console.log("🔊 Voice-over completed");
+    };
+    
+    utterance.onerror = (event) => {
+      console.error("🔊 Voice-over error:", event.error);
+    };
+    
+    window.speechSynthesis?.speak(utterance);
+  };
+
   // ── Receive captions from remote participants via LiveKit data channel ──────
   useEffect(() => {
     const handleData = (payload: Uint8Array) => {
@@ -155,6 +183,10 @@ function CallRoom({ roomId, authToken }: { roomId: string; authToken: string }) 
         // If empty text received, clear caption immediately
         if (!msg.text) {
           console.log(`🗑️ Clearing caption for ${msg.identity}`);
+          // Cancel any ongoing voice-over
+          window.speechSynthesis?.cancel();
+          console.log("🔊 Voice-over cancelled");
+          
           setCaptions((prev) => {
             const next = { ...prev };
             delete next[msg.identity];
@@ -166,10 +198,17 @@ function CallRoom({ roomId, authToken }: { roomId: string; authToken: string }) 
 
         console.log("Updating captions state with new message");
         setCaptions((prev) => ({ ...prev, [msg.identity]: msg }));
+        
+        // Play voice-over when caption appears
+        playVoiceOver(msg.text);
 
         // Auto-clear after 4 seconds of no update
         const timeout = setTimeout(() => {
           console.log(`⏰ Auto-clearing caption for ${msg.identity} after 4 seconds`);
+          // Cancel voice-over when clearing
+          window.speechSynthesis?.cancel();
+          console.log("🔊 Voice-over cancelled (auto-clear)");
+          
           setCaptions((prev) => {
             if (prev[msg.identity]?.text === msg.text) {
               const next = { ...prev };
