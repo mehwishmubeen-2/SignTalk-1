@@ -23,7 +23,7 @@ _MODEL_NAME = "vennify/t5-base-grammar-correction"
 print("[grammar] Loading grammar-correction model locally...")
 grammar_tokenizer = AutoTokenizer.from_pretrained(_MODEL_NAME)
 grammar_model = AutoModelForSeq2SeqLM.from_pretrained(_MODEL_NAME)
-print("[grammar] ✅ Grammar-correction model ready")
+print("[grammar] [OK] Grammar-correction model ready")
 
 
 class TextInput(BaseModel):

@@ -120,10 +120,19 @@ export const useSignDetectionWebSocket = (
     console.log("✅ Local caption update called");
     
     // 🔊 PLAY VOICE-OVER FOR SENDER
-    console.log("🔊 Playing voice-over for sign:", text);
+    console.log("🔊 ========== VOICE-OVER FOR SIGN STARTING ==========");
+    console.log("🔊 Text to speak:", text);
+    console.log("🔊 speechSynthesis available:", !!window.speechSynthesis);
+    
     try {
-      // Cancel any ongoing speech
-      window.speechSynthesis?.cancel();
+      if (!window.speechSynthesis) {
+        console.error("🔊 ERROR: Web Speech Synthesis API not available in this browser!");
+        throw new Error("speechSynthesis not available");
+      }
+      
+      console.log("🔊 Canceling any previous speech...");
+      window.speechSynthesis.cancel();
+      console.log("🔊 Previous speech cancelled");
       
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1.0;      // Normal speed
@@ -131,22 +140,38 @@ export const useSignDetectionWebSocket = (
       utterance.volume = 1.0;    // Full volume
       utterance.lang = "en-US";  // English
       
+      console.log("🔊 Utterance created:", {
+        text: utterance.text,
+        rate: utterance.rate,
+        pitch: utterance.pitch,
+        volume: utterance.volume,
+        lang: utterance.lang
+      });
+      
       utterance.onstart = () => {
-        console.log("🔊 Sign voice-over started:", text);
+        console.log("🔊 ✅ VOICE-OVER STARTED PLAYING:", text);
       };
       
       utterance.onend = () => {
-        console.log("🔊 Sign voice-over completed:", text);
+        console.log("🔊 ✅ VOICE-OVER FINISHED:", text);
       };
       
       utterance.onerror = (event) => {
-        console.error("🔊 Sign voice-over error:", event.error);
+        console.error("🔊 ❌ VOICE-OVER ERROR:", event.error);
+        console.error("🔊 Error details:", event);
       };
       
-      window.speechSynthesis?.speak(utterance);
+      console.log("🔊 About to call window.speechSynthesis.speak()...");
+      window.speechSynthesis.speak(utterance);
+      console.log("🔊 ✅ window.speechSynthesis.speak() called successfully");
     } catch (err) {
-      console.error("🔊 Failed to play sign voice-over:", err);
+      console.error("🔊 ❌ EXCEPTION in voice-over code:", err);
+      console.error("🔊 Error details:", {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : "no stack"
+      });
     }
+    console.log("🔊 ========== VOICE-OVER CODE BLOCK FINISHED ==========");
     
     try {
       const participant = r?.localParticipant;
@@ -405,3 +430,120 @@ export const useSignDetectionWebSocket = (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, videoEl, roomId, authToken]);
 };
+
+// ============================================================================
+// GLOBAL DIAGNOSTIC FUNCTION - Call from browser console to test voice-over
+// ============================================================================
+// Usage: In browser console, type: testVoiceOverDiagnostics()
+(window as any).testVoiceOverDiagnostics = function() {
+  console.log("🔊 ============ VOICE-OVER DIAGNOSTIC TEST ============");
+  console.log("🔊 Testing Web Speech Synthesis API...\n");
+  
+  // Check if API exists
+  console.log("1️⃣  API Availability Check:");
+  console.log("   window.speechSynthesis exists:", !!window.speechSynthesis);
+  console.log("   window.SpeechSynthesisUtterance exists:", !!window.SpeechSynthesisUtterance);
+  console.log("   Browser supports Web Speech API:", !!(window.speechSynthesis && window.SpeechSynthesisUtterance));
+  
+  if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+    console.error("🔊 ❌ FATAL: This browser does NOT support Web Speech Synthesis API");
+    console.log("    Supported browsers: Chrome, Edge, Firefox 49+, Safari 14.1+, Mobile browsers");
+    return;
+  }
+  
+  console.log("\n2️⃣  speechSynthesis Properties:");
+  console.log("   pending:", window.speechSynthesis.pending);
+  console.log("   speaking:", window.speechSynthesis.speaking);
+  console.log("   paused:", window.speechSynthesis.paused);
+  
+  console.log("\n3️⃣  Creating test utterance...");
+  const utterance = new SpeechSynthesisUtterance("Hello world test");
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+  utterance.lang = "en-US";
+  
+  console.log("   Utterance created:", {
+    text: utterance.text,
+    rate: utterance.rate,
+    pitch: utterance.pitch,
+    volume: utterance.volume,
+    lang: utterance.lang
+  });
+  
+  let testStarted = false;
+  let testEnded = false;
+  let testError = false;
+  
+  utterance.onstart = () => {
+    testStarted = true;
+    console.log("🔊 ✅ ONSTART callback fired - Voice-over is playing!");
+  };
+  
+  utterance.onend = () => {
+    testEnded = true;
+    console.log("🔊 ✅ ONEND callback fired - Voice-over finished!");
+  };
+  
+  utterance.onerror = (event) => {
+    testError = true;
+    console.error("🔊 ❌ ONERROR callback fired:", event.error);
+  };
+  
+  console.log("\n4️⃣  Calling window.speechSynthesis.speak()...");
+  console.log("🔊 Listen carefully - you should hear 'Hello world test'");
+  
+  try {
+    window.speechSynthesis.speak(utterance);
+    console.log("🔊 ✅ speak() called successfully - no exceptions thrown");
+  } catch (err) {
+    console.error("🔊 ❌ EXCEPTION when calling speak():", err);
+    return;
+  }
+  
+  // Check status immediately
+  console.log("\n5️⃣  Immediate Status Check:");
+  console.log("   speechSynthesis.speaking:", window.speechSynthesis.speaking);
+  console.log("   speechSynthesis.pending:", window.speechSynthesis.pending);
+  
+  // Wait for callbacks
+  console.log("\n6️⃣  Waiting for callbacks (max 10 seconds)...");
+  const maxWait = 10000;
+  const startTime = Date.now();
+  
+  const checkStatus = () => {
+    const elapsed = Date.now() - startTime;
+    
+    if (testStarted && testEnded && !testError) {
+      console.log("🔊 ✅✅✅ SUCCESS! Voice-over working perfectly!");
+      console.log(`    Elapsed time: ${elapsed}ms`);
+      console.log("\n7️⃣  DIAGNOSIS: Your Web Speech Synthesis API is working correctly");
+      console.log("    If voice-over for signs isn't working, check:");
+      console.log("    1. System volume (not muted)");
+      console.log("    2. Browser volume (tab not muted)");
+      console.log("    3. Signs are being detected (check for 🚀 Broadcasting logs)");
+      return;
+    }
+    
+    if (testError) {
+      console.error("🔊 ❌ FAILURE: Voice-over encountered an error");
+      return;
+    }
+    
+    if (elapsed > maxWait) {
+      console.error("🔊 ❌ TIMEOUT: No callbacks received after 10 seconds");
+      console.error("   This indicates the API may be broken or unresponsive");
+      return;
+    }
+    
+    // Keep checking
+    setTimeout(checkStatus, 100);
+  };
+  
+  setTimeout(checkStatus, 100);
+  
+  console.log("🔊 ============ TEST IN PROGRESS ============\n");
+};
+
+console.log("🔊 Diagnostic function loaded: testVoiceOverDiagnostics()");
+console.log("🔊 In browser console, type: testVoiceOverDiagnostics()\n");

@@ -1,5 +1,6 @@
 // src/components/video/CallControls.tsx
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Hand } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Hand } from "lucide-react";
+import { CallEndIcon } from "./CallEndIcon";
 
 interface Props {
   micEnabled: boolean;
@@ -67,7 +68,7 @@ export default function CallControls({
           title="Leave call"
           style={{ ...styles.iconBtn, width: 56, background: "#e11d48", border: "none", color: "#fff" }}
         >
-          <PhoneOff size={20} />
+          <CallEndIcon size={20} />
         </button>
       </div>
 

@@ -12,7 +12,8 @@ from app.db.schema import init_schema
 # ── Video call router ─────────────────────────────────────────────────────────
 # Only import if the VideoCall folder exists in this project
 try:
-    from app.VideoCall.router import router as video_call_router
+    # Use PyTorch-based video calling with sign recognition
+    from app.VideoCall.router_pytorch import router as video_call_router
     _has_video_call = True
 except ModuleNotFoundError:
     _has_video_call = False
@@ -59,3 +60,8 @@ def _on_startup():
 @app.get("/")
 def root():
     return {"message": "SignTalk API is running"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

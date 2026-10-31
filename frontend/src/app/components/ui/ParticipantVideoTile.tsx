@@ -2,7 +2,7 @@
 import { useRef, useEffect, useState } from "react";
 import { VideoTrack } from "@livekit/components-react";
 import type { TrackReferenceOrPlaceholder } from "@livekit/components-react";
-import { useSignCaptions } from "../../hooks/useSignCaptions";
+import { useSignDetectionWebSocket } from "../../hooks/useSignDetectionWebSocket";
 import { useSpeechCaptions } from "../../hooks/useSpeechCaptions";
 import type { CaptionMessage } from "../../types/video";
 
@@ -13,6 +13,8 @@ interface Props {
   signMode: boolean;
   speechMode: boolean;
   onCaptionUpdate: (msg: CaptionMessage) => void;
+  roomId?: string;
+  authToken?: string;
 }
 
 export default function ParticipantVideoTile({
@@ -22,6 +24,8 @@ export default function ParticipantVideoTile({
   signMode,
   speechMode,
   onCaptionUpdate,
+  roomId,
+  authToken,
 }: Props) {
   const participant = trackRef.participant;
   const tileRef     = useRef<HTMLDivElement | null>(null);
@@ -36,6 +40,10 @@ export default function ParticipantVideoTile({
 
   // ── Find video element using interval — more reliable than useEffect ──────
   // Keeps polling until the <video> tag is rendered by LiveKit
+  useEffect(() => {
+    console.log(`🎬 ParticipantVideoTile (${isLocal ? "LOCAL" : "REMOTE"}): signMode=${signMode}, videoEl=${videoEl ? "YES" : "NO"}`);
+  }, [signMode, isLocal]);
+
   useEffect(() => {
     if (!isLocal) return; // only need video el for local tile (inference runs locally)
 
@@ -57,14 +65,16 @@ export default function ParticipantVideoTile({
     return () => clearInterval(interval);
   }, [isLocal]); // run once when component mounts for local tile
 
-  // ── Sign captions hook ────────────────────────────────────────────────────
-  useSignCaptions(
+  // ── Sign detection via WebSocket (PyTorch backend) ────────────────────────
+  useSignDetectionWebSocket(
     isLocal && signMode ? videoEl : null,
     isLocal && signMode,
     canvasRef,
     onCaptionUpdate,
     (status) => setSignStatus(status),
-    (letter) => setLetterPreview(letter)
+    (letter) => setLetterPreview(letter),
+    roomId,
+    authToken
   );
 
   // ── Speech captions hook ──────────────────────────────────────────────────

@@ -1,0 +1,11 @@
+bye
+hello
+how_are_you
+i_am_fine
+i_dont_know
+i_know
+nice_to_meet_you
+no_sign
+see_you_later
+what_is_your_name
+whats_up

@@ -13,7 +13,7 @@ emotion_pipeline = pipeline(
     top_k=None,
     device=-1  # CPU
 )
-print("[emotion] ✅ Emotion model ready")
+print("[emotion] [OK] Emotion model ready")
 
 EMOTION_INFO = {
     "joy":      {"label": "Happy",     "emoji": "😊", "color": "#22c55e"},
