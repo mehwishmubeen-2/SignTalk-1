@@ -119,6 +119,35 @@ export const useSignDetectionWebSocket = (
     cbRef.current.onCaptionUpdate(msg);
     console.log("✅ Local caption update called");
     
+    // 🔊 PLAY VOICE-OVER FOR SENDER
+    console.log("🔊 Playing voice-over for sign:", text);
+    try {
+      // Cancel any ongoing speech
+      window.speechSynthesis?.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;      // Normal speed
+      utterance.pitch = 1.0;     // Normal pitch
+      utterance.volume = 1.0;    // Full volume
+      utterance.lang = "en-US";  // English
+      
+      utterance.onstart = () => {
+        console.log("🔊 Sign voice-over started:", text);
+      };
+      
+      utterance.onend = () => {
+        console.log("🔊 Sign voice-over completed:", text);
+      };
+      
+      utterance.onerror = (event) => {
+        console.error("🔊 Sign voice-over error:", event.error);
+      };
+      
+      window.speechSynthesis?.speak(utterance);
+    } catch (err) {
+      console.error("🔊 Failed to play sign voice-over:", err);
+    }
+    
     try {
       const participant = r?.localParticipant;
       if (!participant) {
