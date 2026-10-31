@@ -199,8 +199,13 @@ function CallRoom({ roomId, authToken }: { roomId: string; authToken: string }) 
         console.log("Updating captions state with new message");
         setCaptions((prev) => ({ ...prev, [msg.identity]: msg }));
         
-        // Play voice-over when caption appears
-        playVoiceOver(msg.text);
+        // Play voice-over ONLY for sign captions, not speech
+        if (msg.type === "sign") {
+          console.log("🔊 Voice-over triggered for sign caption");
+          playVoiceOver(msg.text);
+        } else {
+          console.log("🔊 Voice-over skipped for speech caption");
+        }
 
         // Auto-clear after 4 seconds of no update
         const timeout = setTimeout(() => {
