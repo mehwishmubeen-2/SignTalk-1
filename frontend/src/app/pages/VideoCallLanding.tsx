@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Video, LogIn, Plus, Link2 } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { MinimizedCallPreview } from "../components/ui/MinimizedCallPreview";
 import { supabase } from "../../lib/supabase";
 
 const SESSION_CODE_KEY = "vc_pending_code";
@@ -165,6 +166,9 @@ export function VideoCallLanding() {
           The person who shares the code must start the meeting first.
         </p>
       </motion.div>
+
+      {/* Show minimized call preview if a call is active */}
+      <MinimizedCallPreview />
     </div>
   );
 }

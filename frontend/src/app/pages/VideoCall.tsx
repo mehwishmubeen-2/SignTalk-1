@@ -72,10 +72,10 @@ export default function VideoCallPage() {
     fetchToken();
   }, [roomId]);
 
-  // Handle browser back button — minimize call instead of disconnecting
+  // Handle browser back button — navigate to video-call landing (not -1)
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      console.log("📞 Back button pressed — minimizing call");
+      console.log("📞 Back button pressed — minimizing call and going to video-call page");
       if (token && serverUrl && roomId) {
         // Store the call info for later restoration
         setActiveCall({
@@ -85,8 +85,8 @@ export default function VideoCallPage() {
           isMinimized: true,
         });
       }
-      // Navigate back
-      navigate(-1 as any);
+      // Navigate to video-call landing page (where user started the call)
+      navigate("/video-call");
     };
 
     // Listen for browser back button
@@ -294,9 +294,9 @@ function CallRoom({ roomId, authToken }: { roomId: string; authToken: string }) 
     await room.disconnect();
   }, [room]);
 
-  // ── Minimize call and return to previous page ────────────────────────────────
+  // ── Minimize call and return to video-call landing ──────────────────────────
   const minimizeCall = useCallback(() => {
-    console.log("📞 Minimize button clicked — storing call and navigating back");
+    console.log("📞 Minimize button clicked — storing call and going to video-call page");
     if (room) {
       // Store call info for later restoration
       setActiveCall({
@@ -306,8 +306,8 @@ function CallRoom({ roomId, authToken }: { roomId: string; authToken: string }) 
         isMinimized: true,
       });
     }
-    // Navigate back without disconnecting the room
-    navigate(-1 as any);
+    // Navigate to video-call landing page
+    navigate("/video-call");
   }, [roomId, navigate, setActiveCall, room]);
 
   // ── Local caption handler ────────────────────────────────────────────────────
