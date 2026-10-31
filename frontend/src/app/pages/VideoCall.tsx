@@ -16,6 +16,7 @@ import { supabase } from "../../lib/supabase";
 import { logActivityEvent } from "../../lib/activityApi";
 import ParticipantVideoTile from "../components/ui/ParticipantVideoTile";
 import CallControls from "../components/ui/CallControls";
+import { useActiveCall } from "../context/ActiveCallContext";
 import type { CaptionMessage } from "../types/video";
 
 // ─── Main page: fetches token then mounts LiveKitRoom ────────────────────────
@@ -23,6 +24,7 @@ import type { CaptionMessage } from "../types/video";
 export default function VideoCallPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
+  const { setActiveCall, endCall } = useActiveCall();
   const [token, setToken] = useState<string | null>(null);
   const [serverUrl, setServerUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +72,34 @@ export default function VideoCallPage() {
     fetchToken();
   }, [roomId]);
 
+  // Handle browser back button — minimize call instead of disconnecting
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      console.log("📞 Back button pressed — minimizing call");
+      if (token && serverUrl && roomId) {
+        // Store the call info for later restoration
+        setActiveCall({
+          roomId,
+          token,
+          serverUrl,
+          isMinimized: true,
+        });
+      }
+      // Navigate back
+      navigate(-1 as any);
+    };
+
+    // Listen for browser back button
+    window.addEventListener("popstate", handlePopState);
+    
+    // Push state to enable back button handling
+    window.history.pushState({ callPage: true }, "");
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [token, serverUrl, roomId, navigate, setActiveCall]);
+
   if (error) return <ErrorScreen message={error} onBack={() => navigate("/")} />;
   if (!token || !serverUrl) return <LoadingScreen />;
 
@@ -80,7 +110,11 @@ export default function VideoCallPage() {
       connect={true}
       video={{ resolution: { width: 640, height: 480, frameRate: 30 } }}
       audio={true}
-      onDisconnected={() => navigate("/")}
+      onDisconnected={() => {
+        console.log("📞 Call disconnected by server/user");
+        endCall();
+        navigate("/");
+      }}
       onError={(err) => setError(err.message)}
       style={{ height: "100vh", background: "radial-gradient(circle at top left, rgba(20,184,166,0.18), transparent 32%), linear-gradient(135deg,#fffaf0 0%,#f2fbf8 48%,#fff3ed 100%)" }}
     >
@@ -96,6 +130,8 @@ function CallRoom({ roomId, authToken }: { roomId: string; authToken: string }) 
   const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
   const participants = useParticipants();
+  const navigate = useNavigate();
+  const { setActiveCall } = useActiveCall();
   const tracks = useTracks([
     { source: Track.Source.Camera, withPlaceholder: true },
   ]);
@@ -258,6 +294,22 @@ function CallRoom({ roomId, authToken }: { roomId: string; authToken: string }) 
     await room.disconnect();
   }, [room]);
 
+  // ── Minimize call and return to previous page ────────────────────────────────
+  const minimizeCall = useCallback(() => {
+    console.log("📞 Minimize button clicked — storing call and navigating back");
+    if (room) {
+      // Store call info for later restoration
+      setActiveCall({
+        roomId,
+        token: "", // We don't have direct access to token here, but room stays connected
+        serverUrl: "", // Same as above
+        isMinimized: true,
+      });
+    }
+    // Navigate back without disconnecting the room
+    navigate(-1 as any);
+  }, [roomId, navigate, setActiveCall, room]);
+
   // ── Local caption handler ────────────────────────────────────────────────────
   const handleLocalCaption = useCallback((msg: CaptionMessage) => {
     console.log(`[VideoCall] handleLocalCaption called:`, msg);
@@ -344,6 +396,7 @@ function CallRoom({ roomId, authToken }: { roomId: string; authToken: string }) 
         }}
         onToggleSpeech={() => setSpeechMode((v) => !v)}
         onLeave={leaveCall}
+        onMinimize={minimizeCall}
       />
     </div>
   );

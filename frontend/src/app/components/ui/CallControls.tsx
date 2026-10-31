@@ -1,5 +1,5 @@
 // src/components/video/CallControls.tsx
-import { Mic, MicOff, Video, VideoOff, Hand } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Hand, ChevronDown } from "lucide-react";
 import { CallEndIcon } from "./CallEndIcon";
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
   onToggleSign: () => void;
   onToggleSpeech: () => void;
   onLeave: () => void;
+  onMinimize?: () => void;
 }
 
 export default function CallControls({
@@ -24,6 +25,7 @@ export default function CallControls({
   onToggleSign,
   onToggleSpeech,
   onLeave,
+  onMinimize,
 }: Props) {
   return (
     <div style={styles.bar}>
@@ -63,6 +65,14 @@ export default function CallControls({
           title={cameraEnabled ? "Turn off camera" : "Turn on camera"}
           icon={cameraEnabled ? <Video size={20} /> : <VideoOff size={20} />}
         />
+        {onMinimize && (
+          <IconButton
+            onClick={onMinimize}
+            active={false}
+            title="Minimize call"
+            icon={<ChevronDown size={20} />}
+          />
+        )}
         <button
           onClick={onLeave}
           title="Leave call"
