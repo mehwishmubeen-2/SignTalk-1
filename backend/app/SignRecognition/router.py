@@ -32,7 +32,6 @@ MODEL_CANDIDATES = [
     os.path.join(VIDEO_CALL_DIR, "asl_word_model.pkl"),
     os.path.join(VIDEO_CALL_DIR, "asl_word_model .pkl"),
     os.path.join(MODEL_DIR, "asl_rf_model.pkl"),
-    os.path.join(MODEL_DIR, "asl_rf_model .pkl"),
 ]
 MODEL_PKL_PATH = next((p for p in MODEL_CANDIDATES if os.path.exists(p)), MODEL_CANDIDATES[0])
 
