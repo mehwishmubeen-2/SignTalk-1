@@ -24,7 +24,6 @@ import {
   type DashboardResponse,
 } from '../../lib/activityApi';
 
-// Maps the backend's generic activity event types to icon + color for the
 // Recent Activity feed (the backend only knows about the data, not UI).
 const ACTIVITY_ICONS: Record<string, { icon: typeof BookmarkPlus; color: string }> = {
   sign_practiced: { icon: BookmarkPlus, color: 'bg-teal-100 text-teal-700' },
@@ -75,7 +74,7 @@ export function Dashboard() {
       trend: dashboard.stats.signs_learned.trend,
     },
     {
-      label: 'Video Calls',
+      label: 'Video Call',
       value: String(dashboard.stats.video_calls.value),
       unit: 'calls',
       icon: Video,

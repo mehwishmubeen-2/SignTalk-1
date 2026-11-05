@@ -17,7 +17,7 @@ try:
     _has_video_call = True
 except ModuleNotFoundError:
     _has_video_call = False
-    print("[startup] ⚠️  app.VideoCall not found — video call endpoints disabled")
+    print("[startup]  app.VideoCall not found — video call endpoints disabled")
     print("[startup]     Create backend/app/VideoCall/__init__.py and router.py to enable")
 
 app = FastAPI(title="SignTalk API", version="1.0.0")
