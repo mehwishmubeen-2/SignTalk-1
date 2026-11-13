@@ -170,7 +170,7 @@ async def websocket_sign_detect(websocket: WebSocket, room_id: str, token: Optio
 def health_check():
     """Check if sign detection is available."""
     try:
-        from app.services.pytorch_sign_recognizer import SignRecognizer
+        from app.services.pytorch_sign_recognizer import SignModelEnsemble
         from pathlib import Path
         
         model_dir = Path(__file__).parent.parent / "SignRecognition"

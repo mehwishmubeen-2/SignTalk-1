@@ -16,6 +16,8 @@ import {
   Hand,
   MessageCircle,
   CheckCircle2,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -30,6 +32,7 @@ export function Home() {
   const { user } = useAuth();
   const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [myReviews, setMyReviews] = useState<MyReview[]>([]);
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [newRating, setNewRating] = useState(0);
   const [newText, setNewText] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -387,48 +390,108 @@ export function Home() {
       </motion.section>
 
       {/* ── Testimonials ──────────────────────────────────────────────────── */}
-      <motion.section variants={itemVariants} className="space-y-6 px-4 sm:px-0">
-        <div className="text-center space-y-1">
-          <h2 className="text-2xl sm:text-3xl font-bold">Trusted by Thousands</h2>
-          <p className="text-sm sm:text-base text-gray-600">See what our community is saying</p>
+      <motion.section variants={itemVariants} className="space-y-8 px-4 sm:px-0">
+        <div className="text-center space-y-3">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
+            Trusted by Thousands
+          </h2>
+          <p className="text-base sm:text-lg text-slate-600 font-medium">See what our community is saying</p>
         </div>
 
         {reviews.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {reviews.map((review, index) => (
-              <motion.div key={index} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 * index }} whileHover={{ scale: 1.05, y: -5 }}>
-                <Card className="shadow-lg hover:shadow-xl transition-all">
-                  <CardContent className="pt-6 space-y-4">
-                    <div className="flex gap-1">
-                      {[...Array(review.rating)].map((_, i) => (
-                        <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                      ))}
-                    </div>
-                    <p className="text-gray-600 italic">"{review.text}"</p>
-                    <div>
-                      <p className="font-semibold">{review.name}</p>
-                      {review.role && <p className="text-sm text-gray-500">{review.role}</p>}
-                    </div>
-                  </CardContent>
-                </Card>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {reviews.slice(0, showAllReviews ? reviews.length : 3).map((review, index) => {
+                const isOwnReview = myReviews.some(r => r.text === review.text && r.rating === review.rating);
+                const myReview = myReviews.find(r => r.text === review.text && r.rating === review.rating);
+                
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 * index }}
+                    whileHover={{ scale: 1.02, y: -8 }}
+                    className="group relative"
+                  >
+                    <Card className="shadow-md hover:shadow-2xl transition-all h-full border-0 bg-white">
+                      <CardContent className="pt-8 space-y-5 pb-8 px-8">
+                        <div className="flex gap-1.5">
+                          {[...Array(review.rating)].map((_, i) => (
+                            <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
+                          ))}
+                        </div>
+                        <p className="text-slate-700 leading-relaxed text-base font-normal">"{review.text}"</p>
+                        <div className="pt-2 border-t border-slate-100">
+                          <p className="font-semibold text-slate-900 text-sm tracking-wide">{review.name}</p>
+                          {review.role && <p className="text-xs text-slate-500 font-medium mt-1">{review.role}</p>}
+                        </div>
+                      </CardContent>
+                      
+                      {isOwnReview && myReview && (
+                        <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <motion.button
+                            type="button"
+                            onClick={() => startEditing(myReview)}
+                            className="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            title="Edit review"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </motion.button>
+                          <motion.button
+                            type="button"
+                            onClick={() => handleDeleteReview(myReview.id)}
+                            className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white shadow-lg"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            title="Delete review"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </motion.button>
+                        </div>
+                      )}
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {reviews.length > 3 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="flex justify-center pt-4"
+              >
+                <Button
+                  onClick={() => setShowAllReviews(!showAllReviews)}
+                  className="bg-gradient-to-r from-teal-700 to-emerald-600 hover:opacity-90 text-white shadow-lg rounded-lg px-8 py-2.5 font-semibold text-base transition-all hover:scale-105"
+                >
+                  {showAllReviews ? '← Show Less' : `View More (${reviews.length - 3} more) →`}
+                </Button>
               </motion.div>
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <p className="text-center text-sm text-gray-500">Be the first to share your experience!</p>
         )}
 
         {/* ── Write a review ──────────────────────────────────────────────── */}
-        <Card className="max-w-xl mx-auto shadow-lg border-2 border-teal-900/10">
-          <CardContent className="pt-6 space-y-4">
+        <Card className="max-w-2xl mx-auto shadow-xl border-0 rounded-2xl bg-gradient-to-br from-slate-50 to-white">
+          <CardContent className="pt-8 space-y-6">
             {user ? (
               <>
-                <p className="font-semibold text-center">Share your experience</p>
-                <div className="flex justify-center gap-1">
+                <div className="text-center space-y-2">
+                  <p className="font-bold text-lg text-slate-900 tracking-tight">Share Your Experience</p>
+                  <p className="text-sm text-slate-600">Help others learn with your feedback</p>
+                </div>
+                <div className="flex justify-center gap-2">
                   {[1, 2, 3, 4, 5].map(star => (
                     <button key={star} type="button" onClick={() => setNewRating(star)}>
                       <Star
-                        className={`w-7 h-7 transition-colors ${star <= newRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                        className={`w-8 h-8 transition-all cursor-pointer ${star <= newRating ? 'fill-amber-400 text-amber-400 scale-110' : 'text-slate-300 hover:text-amber-300'}`}
                       />
                     </button>
                   ))}
@@ -439,68 +502,77 @@ export function Home() {
                   placeholder="Tell others what you think about SignTalk..."
                   maxLength={500}
                   rows={3}
+                  className="rounded-lg border-slate-200 text-slate-700 placeholder:text-slate-400"
                 />
                 <Button
                   onClick={handleAddReview}
                   disabled={isSubmittingReview}
-                  className="w-full bg-gradient-to-r from-teal-700 via-emerald-600 to-orange-500 hover:opacity-90"
+                  className="w-full bg-gradient-to-r from-teal-700 via-emerald-600 to-orange-500 hover:opacity-90 text-white font-semibold text-base rounded-lg py-3 shadow-lg transition-all"
                 >
-                  {isSubmittingReview ? 'Saving...' : 'Submit Review'}
+                  {isSubmittingReview ? 'Saving...' : '✓ Submit Review'}
                 </Button>
               </>
             ) : (
-              <div className="text-center space-y-3">
-                <p className="text-gray-600">Sign in to share your experience with the community</p>
+              <div className="text-center space-y-4">
+                <p className="text-slate-700 font-medium">Sign in to share your experience with the community</p>
                 <Link to="/auth">
-                  <Button variant="outline" className="border-2 border-teal-900/30">Sign In</Button>
+                  <Button variant="outline" className="border-2 border-teal-700 text-teal-700 font-semibold hover:bg-teal-50 rounded-lg">Sign In</Button>
                 </Link>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* ── Your reviews — edit or delete anything you've posted ─────────── */}
-        {user && myReviews.length > 0 && (
-          <div className="max-w-xl mx-auto space-y-3">
-            <p className="font-semibold text-center text-sm text-gray-600">Your Reviews</p>
-            {myReviews.map(review => (
-              <Card key={review.id} className="border border-teal-900/10">
-                <CardContent className="pt-4 space-y-3">
-                  {editingId === review.id ? (
-                    <>
-                      <div className="flex justify-center gap-1">
-                        {[1, 2, 3, 4, 5].map(star => (
-                          <button key={star} type="button" onClick={() => setEditRating(star)}>
-                            <Star
-                              className={`w-6 h-6 transition-colors ${star <= editRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                      <Textarea value={editText} onChange={e => setEditText(e.target.value)} maxLength={500} rows={3} />
-                      <div className="flex gap-2">
-                        <Button size="sm" className="flex-1" onClick={() => handleUpdateReview(review.id)}>Save</Button>
-                        <Button size="sm" variant="outline" className="flex-1" onClick={cancelEditing}>Cancel</Button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex gap-1">
-                        {[...Array(review.rating)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        ))}
-                      </div>
-                      <p className="text-gray-600 italic text-sm">"{review.text}"</p>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1" onClick={() => startEditing(review)}>Edit</Button>
-                        <Button size="sm" variant="outline" className="flex-1 text-rose-600 hover:text-rose-700" onClick={() => handleDeleteReview(review.id)}>Delete</Button>
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        {/* ── Edit Review Modal ──────────────────────────────────────────── */}
+        {user && editingId !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="max-w-2xl mx-auto"
+          >
+            <Card className="border-2 border-blue-200 shadow-2xl rounded-2xl bg-gradient-to-br from-blue-50 to-white">
+              <CardContent className="pt-8 space-y-6">
+                <div className="text-center space-y-2">
+                  <p className="font-bold text-lg text-slate-900 tracking-tight">Edit Your Review</p>
+                  <p className="text-sm text-slate-600">Update your feedback</p>
+                </div>
+                <div className="flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button key={star} type="button" onClick={() => setEditRating(star)}>
+                      <Star
+                        className={`w-8 h-8 transition-all cursor-pointer ${star <= editRating ? 'fill-amber-400 text-amber-400 scale-110' : 'text-slate-300 hover:text-amber-300'}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <Textarea
+                  value={editText}
+                  onChange={e => setEditText(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  className="rounded-lg border-slate-200 text-slate-700 placeholder:text-slate-400"
+                />
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    size="sm"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg py-2.5"
+                    onClick={() => handleUpdateReview(editingId)}
+                  >
+                    ✓ Save Changes
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 border-2 border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 rounded-lg"
+                    onClick={cancelEditing}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
       </motion.section>
 

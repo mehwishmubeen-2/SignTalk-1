@@ -29,6 +29,19 @@ MAX_QUEUED_FRAMES = 8
 IDLE_TIMEOUT_S = 30.0
 
 
+def _decode_and_process(data_b64: str, session):
+    """Decode a base64 JPEG and feed it to the session. Runs in a worker
+    thread (called via asyncio.to_thread) so the event loop is never blocked
+    by JPEG/base64 decoding and stays free to keep draining the socket.
+    Returns (decoded_ok, event).
+    """
+    frame_bytes = base64.b64decode(data_b64)
+    frame = cv2.imdecode(np.frombuffer(frame_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if frame is None:
+        return False, None
+    return True, session.process_frame(frame)
+
+
 class PyTorchVideoStreamHandler:
     """Handle WebSocket connections for real-time sign recognition."""
 
@@ -131,16 +144,16 @@ class PyTorchVideoStreamHandler:
 
                 frame_count += 1
                 try:
-                    frame_bytes = base64.b64decode(message["data"])
-                    frame = cv2.imdecode(
-                        np.frombuffer(frame_bytes, dtype=np.uint8), cv2.IMREAD_COLOR
+                    was_in_sign = session.in_sign
+                    # Decode + process in one background-thread call so the event
+                    # loop stays free to keep draining the socket (decoding inline
+                    # here would stall receive_text() and build up TCP backpressure).
+                    decoded, event = await asyncio.to_thread(
+                        _decode_and_process, message["data"], session
                     )
-                    if frame is None:
+                    if not decoded:
                         error_count += 1
                         continue
-
-                    was_in_sign = session.in_sign
-                    event = await asyncio.to_thread(session.process_frame, frame)
 
                     if not was_in_sign and session.in_sign:
                         await websocket.send_text(json.dumps({"type": "sign_start"}))

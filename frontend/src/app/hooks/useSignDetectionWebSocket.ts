@@ -4,8 +4,10 @@
  * (base64) and turns the server's predictions into captions shared through
  * the LiveKit data channel.
  *
- * Classes: bye, hello, how_are_you, i_am_fine, i_dont_know, i_know,
- * nice_to_meet_you, no_sign, see_you_later, what_is_your_name, whats_up
+ * Classes: bye, good_morning, hello, how_are_you, i_am_busy, i_am_fine,
+ * i_cant_hear_you, i_dont_know, i_know, i_need_help, i_understand,
+ * nice_to_meet_you, no_sign, no_thankyou, same_here, see_you_later,
+ * take_care, what_is_your_name, whats_up, yes_please
  */
 
 import { useEffect, useRef } from "react";

@@ -60,8 +60,8 @@ def main():
         print(f"  ✅ prep() function available")
         print(f"  ✅ {len(classes)} sign classes: {', '.join(classes[:3])}...")
         
-        from app.services.pytorch_sign_recognizer import SignRecognizer
-        print(f"  ✅ SignRecognizer service")
+        from app.services.pytorch_sign_recognizer import SignModelEnsemble
+        print(f"  ✅ SignModelEnsemble service")
         
         from app.services.pytorch_video_handler import PyTorchVideoStreamHandler
         print(f"  ✅ PyTorchVideoStreamHandler")
@@ -76,7 +76,6 @@ def main():
     try:
         from common import SignNet
         import torch
-        from pathlib import Path
         
         model_dir = Path("app/SignRecognition")
         model_files = sorted(model_dir.glob("best_*.pt"))

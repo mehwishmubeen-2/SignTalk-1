@@ -1,3 +1,13 @@
+import sys
+
+# Windows consoles default to a legacy codepage (e.g. cp1252) that can't encode
+# the emoji used in startup log messages below and in imported modules, causing
+# a crash on startup when running locally without Docker (whose Linux image
+# defaults to UTF-8). Force UTF-8 before anything else prints.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.Chatbot import router as chatbot_router
