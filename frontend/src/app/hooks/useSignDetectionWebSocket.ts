@@ -275,14 +275,16 @@ export const useSignDetectionWebSocket = (
     const pct = Math.round(data.confidence * 100);
 
     // Low confidence: tentative preview only, never committed to the caption.
+    // Do NOT show in green box - keep showing "Signing..."
     if (data.confidence < CONFIDENCE_THRESHOLD) {
       console.log(`⚠️ Low confidence (${pct}%) - not broadcasting`);
-      emitPreview(`${formatSign(data.sign)} ${pct}%?`);
+      // Don't show low confidence word in green box
+      // emitPreview(null);  // Keep the "Signing..." showing from earlier
       return;
     }
 
     console.log(`🚀 Broadcasting sign: ${formatSign(data.sign)}`);
-    emitPreview(`${formatSign(data.sign)} ${pct}%`);
+    emitPreview(null);  // ← Clear green box when showing in caption
     broadcast(formatSign(data.sign), false); // classes are whole sentences: replace, don't append
     scheduleClear();
   };

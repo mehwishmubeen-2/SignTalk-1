@@ -94,7 +94,7 @@ export default function ParticipantVideoTile({
 
       {/* ── Video or avatar placeholder ── */}
       {trackRef.publication ? (
-        <VideoTrack trackRef={trackRef} style={styles.video} />
+        <VideoTrack trackRef={trackRef} style={isLocal ? styles.videoLocal : styles.video} />
       ) : (
         <div style={styles.avatarWrapper}>
           <div style={styles.avatarCircle}>{initials}</div>
@@ -129,9 +129,9 @@ export default function ParticipantVideoTile({
         </div>
       )}
 
-      {/* ── Predicted word / letter preview ── */}
+      {/* ── Predicted word / letter preview - Shows "Signing..." while detecting ── */}
       {isLocal && signMode && letterPreview && (
-        <div style={styles.letterPreview}>Detected: {letterPreview}</div>
+        <div style={styles.letterPreview}>{letterPreview}</div>
       )}
 
       {/* ── Mode + status badges ── */}
@@ -190,6 +190,13 @@ const styles = {
     height: "100%",
     objectFit: "cover" as const,
     display: "block" as const,
+  },
+  videoLocal: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover" as const,
+    display: "block" as const,
+    transform: "scaleX(-1)" as const,  // ← Un-mirror the local video
   },
   canvas: {
     position: "absolute" as const,
