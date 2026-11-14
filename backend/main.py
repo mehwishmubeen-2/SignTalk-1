@@ -1,3 +1,4 @@
+import os
 import sys
 
 # Windows consoles default to a legacy codepage (e.g. cp1252) that can't encode
@@ -33,20 +34,27 @@ except ModuleNotFoundError:
 app = FastAPI(title="SignTalk API", version="1.0.0")
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
+# Local development origins are always allowed. In production, set the
+# FRONTEND_URL environment variable (e.g. on Render) to your deployed frontend,
+# for example: https://your-app.vercel.app
+# Several URLs can be given, separated by commas.
+_local_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://localhost:3000",
+    "http://localhost:5001",  # Flask sign service
+]
+_production_origins = [
+    o.strip().rstrip("/")
+    for o in os.getenv("FRONTEND_URL", "").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-         allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://localhost:3000",
-        "http://localhost:5001",  # Flask sign service
-    ],
+    allow_origins=_local_origins + _production_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
