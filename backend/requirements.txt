@@ -1,31 +1,36 @@
-# Merged from your backend/requirements.txt. Python 3.11.9.
+# Backend requirements for Render (Docker, Python 3.11).
 # torch is NOT listed: the Dockerfile installs the CPU-only build first.
-# opencv-python is replaced by opencv-contrib-python (mediapipe needs the contrib build;
-# having both installed makes them overwrite each other).
+# opencv-contrib-python replaces opencv-python (mediapipe needs the contrib build;
+# installing both makes them overwrite each other).
+# pydantic_core is not listed: pydantic installs the exact matching version itself.
 
+# --- API server ---
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
-supabase==2.7.4
-python-dotenv==1.0.1
-psycopg2-binary==2.9.9
-opencv-contrib-python==4.11.0.86
-mediapipe==0.10.14
-numpy==1.26.4
-scikit-learn==1.6.1
-joblib==1.6.0
 websockets==15.0.1
-SpeechRecognition==3.10.4
+pydantic[email]==2.13.5
+email-validator==2.3.0
 python-multipart==0.0.9
-protobuf==4.25.3
+python-dotenv==1.0.1
 
-# --- PIN THESE before deploying (run `pip freeze | findstr /i "pydantic whisper livekit requests httpx transformers sentencepiece"`
-# --- in your venv and use the exact versions shown; unpinned packages can change between deploys) ---
+# --- Database / auth / networking ---
+supabase==2.7.4
+psycopg2-binary==2.9.9
 httpx==0.27.2
+requests==2.34.2
 livekit-api==1.1.1
 livekit-protocol==1.1.17
+
+# --- Sign recognition (MediaPipe, scikit-learn random forest) ---
+numpy==1.26.4
+scikit-learn==1.6.1   # must match the version that saved the random forest model
+joblib==1.6.0
+opencv-contrib-python==4.11.0.86
+mediapipe==0.10.14
+protobuf==4.25.3
+
+# --- Speech / language models ---
+SpeechRecognition==3.10.4
 openai-whisper==20250625
-pydantic==2.13.5
-pydantic_core==2.46.5
-requests==2.34.2
-sentencepiece==0.2.2
 transformers==5.17.0
+sentencepiece==0.2.2
