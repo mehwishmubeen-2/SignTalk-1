@@ -13,6 +13,7 @@
 import { useEffect, useRef } from "react";
 import type React from "react";
 import { useRoomContext } from "@livekit/components-react";
+import { supabase } from "../../lib/supabase";
 import type { CaptionMessage } from "../types/video";
 
 type PredictionResponse = {
@@ -39,12 +40,15 @@ type Status = "loading" | "ready" | "detecting" | "error";
 const FRAME_RATE = 30; // training FPS
 const SEND_WIDTH = 640; // frame size the model saw during training
 const SEND_HEIGHT = 480;
-const MIRROR_FRAMES = false; // true if training frames were flipped (cv2.flip)
+// Raw camera frames are sent as-is (this is what the model was verified with).
+// The on-screen CSS mirror does NOT affect captured frames; flipping here swaps
+// left/right hands and breaks detection.
+const MIRROR_FRAMES = false;
 // ---------------------------------------------------------------------------
 
 const WS_BASE = "ws://localhost:8000";
 const JPEG_QUALITY = 0.8;
-const MAX_BUFFERED_BYTES = 512 * 1024; // skip frames if the socket is backed up
+const MAX_BUFFERED_BYTES = 512 * 1024; // skip frames only if the socket is badly backed up
 const CONFIDENCE_THRESHOLD = 0.4;
 const CAPTION_HOLD_MS = 3000; // keep caption visible after the hand leaves
 const DEBUG = false;
@@ -78,6 +82,18 @@ export const useSignDetectionWebSocket = (
   const lastStatusRef = useRef<Status | "">("");
   const lastPreviewRef = useRef<string | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Supabase access tokens expire (~1h); getSession() refreshes them when
+  // needed, so each (re)connect uses a valid token instead of the one captured
+  // when the call page first loaded.
+  const getFreshToken = async (fallback: string): Promise<string> => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      return data.session?.access_token ?? fallback;
+    } catch {
+      return fallback;
+    }
+  };
 
   const emitStatus = (s: Status) => {
     if (lastStatusRef.current === s) return;
@@ -311,18 +327,8 @@ export const useSignDetectionWebSocket = (
 
     const captureAndSend = (socket: WebSocket) => {
       if (!ctx || socket.readyState !== WebSocket.OPEN) return;
-      if (socket.bufferedAmount > MAX_BUFFERED_BYTES) {
-        console.warn("⚠️ WebSocket buffered amount exceeded:", socket.bufferedAmount);
-        return; // backpressure
-      }
-      if (videoEl.readyState < 2 || videoEl.videoWidth === 0) {
-        console.warn("⚠️ Video element not ready:", {
-          readyState: videoEl.readyState,
-          videoWidth: videoEl.videoWidth
-        });
-        return;
-      }
-
+      if (socket.bufferedAmount > MAX_BUFFERED_BYTES) return; // backpressure
+      if (videoEl.readyState < 2 || videoEl.videoWidth === 0) return;
       const vw = videoEl.videoWidth;
       const vh = videoEl.videoHeight;
 
@@ -358,8 +364,8 @@ export const useSignDetectionWebSocket = (
       const frameMsg = { type: "frame", data: base64, ts: Date.now(), seq: seq++ };
       socket.send(JSON.stringify(frameMsg));
       sentInWindow += 1;
-      
-      if (seq % 30 === 0) {  // Log every 30 frames (roughly once per second at 30 FPS)
+
+      if (seq % 90 === 0) {
         console.log(`📤 Frame #${seq}: sent ${base64.length} bytes, buffered: ${socket.bufferedAmount}`);
       }
     };
@@ -371,13 +377,15 @@ export const useSignDetectionWebSocket = (
       }
     };
 
-    const connect = () => {
+    const connect = async () => {
       if (disposed) return;
       emitStatus("loading");
 
-      const url = `${WS_BASE}/meetings/ws/${roomId}/sign-detect?token=${encodeURIComponent(authToken)}`;
+      const validToken = await getFreshToken(authToken);
+      if (disposed) return; // toggled off while the token was being fetched
+
+      const url = `${WS_BASE}/meetings/ws/${roomId}/sign-detect?token=${encodeURIComponent(validToken)}`;
       console.log("🔌 WebSocket connecting to:", `${WS_BASE}/meetings/ws/${roomId}/sign-detect`);
-      console.log("Full URL (with token):", url);
       const socket = new WebSocket(url);
       ws = socket;
 

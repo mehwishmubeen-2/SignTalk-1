@@ -30,8 +30,29 @@ class TextInput(BaseModel):
     text: str
 
 
+_CONTRACTION_FIXES = [
+    (r"\bi\s*m\b", "i am"),
+    (r"\b(you|we|they)\s*re\b", r"\1 are"),
+    (r"\b(he|she|it)\s*s\b", r"\1 is"),
+    (r"\bu\b", "you"),
+    (r"\bur\b", "your"),
+    (r"\br\b", "are"),
+    (r"\bdont\b", "do not"),
+    (r"\bcant\b", "cannot"),
+]
+
+
+def _preprocess(text: str) -> str:
+    # Fingerspelling drops apostrophes/spaces ("I M", "IM"); expand them so the
+    # model sees clean input instead of the ambiguous fragment "m".
+    text = text.lower()
+    for pattern, repl in _CONTRACTION_FIXES:
+        text = re.sub(pattern, repl, text)
+    return text
+
+
 def _postprocess(text: str) -> str:
-    text = re.sub(r"\bim\b", "I'm", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bim\b", "I am", text, flags=re.IGNORECASE)
     text = text[:1].upper() + text[1:] if text else text
     if text and text[-1] not in ".!?":
         text += "."
@@ -47,10 +68,12 @@ def correct_grammar(body: TextInput):
     # Fingerspelled text comes in ALL CAPS, which is out-of-distribution for a
     # model trained on normally-cased text. Lowercasing first keeps it
     # in-distribution; the model re-capitalizes correctly on its own.
-    normalized = "grammar: " + raw.lower()
+    normalized = "grammar: " + _preprocess(raw)
 
     inputs = grammar_tokenizer(normalized, return_tensors="pt", truncation=True, max_length=128)
-    output_ids = grammar_model.generate(**inputs, max_length=128, num_beams=4)
+    output_ids = grammar_model.generate(
+        **inputs, max_length=128, num_beams=4, no_repeat_ngram_size=3
+    )
     corrected = _postprocess(grammar_tokenizer.decode(output_ids[0], skip_special_tokens=True).strip())
 
     return {"original": raw, "corrected": corrected}
